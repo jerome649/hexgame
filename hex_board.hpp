@@ -2,7 +2,6 @@
 #define HEX_BOARD_H_
 
 #include "hex_node.hpp"
-#include "hex_path.hpp"
 
 class HexBoard {
 public:
