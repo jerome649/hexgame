@@ -26,9 +26,9 @@ void HexNode::set_player(int p) {
 
 std::string HexNode::get_letter() {
   if (this->player == 1) {
-    return "B";
+    return "X";
   } else if (this->player == 2) {
-    return "R";
+    return "O";
   } else {
     return " ";
     //std::string i_s = std::to_string(this->id_i);

@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <random>
 #include <iostream>
+#include <time.h>
+#include <thread>
 
 
 HexAi::HexAi(HexBoard* hex_board, int mc_steps) : hex_board(hex_board), mc_steps(mc_steps) {
@@ -12,65 +14,148 @@ HexAi::~HexAi() {
 
 }
 
-HexNode* HexAi::best_move(int player) {
-  std::vector<HexNode*> available_moves = this->hex_board->available_moves();
+int run_mc(HexBoard* hb, std::vector<HexNode*>& available_moves, int choice, int player, int mc_steps) {
+  HexNode* choice_node = available_moves[choice];
+  hb->play(choice_node->get_id_i(), choice_node->get_id_j(), player);
 
   int size = available_moves.size();
-  int max_proba = -1.0;
-  HexNode* best_move = NULL;
 
-  for (int i = 0; i < size; i++) {
-    //std::cout << "Progress : " << i << " / " << size << std::endl;
-    this->hex_board->play(available_moves[i]->get_id_i(), available_moves[i]->get_id_j(), player);
+  int win_count = 0;
+  for (int j = 0; j < mc_steps; j++) {
+    int moves[size - 1];
 
-    int win_count = 0;
-    for (int j = 0; j < this->mc_steps; j++) {
-      int moves [size - 1];
-
-      int move_idx = 0;
-      for (int k = 0; k < size - 1; k++) {
-        if (move_idx == i) {
-          move_idx = move_idx + 1;
-        }
-        moves[k] = move_idx;
+    int move_idx = 0;
+    for (int k = 0; k < size - 1; k++) {
+      if (move_idx == choice) {
         move_idx = move_idx + 1;
       }
-
-      int seed = 2 * j;
-      std::shuffle(moves, moves + (size - 1), std::default_random_engine(seed));
-
-      //for (int k = 0; k < size - 1; k++) {
-      //  std::cout << moves[k] << " ";
-      //}
-
-      //std::cout << std::endl;
-
-      int p = player;
-      for (int l = 0; l < size - 1; l++) {
-        p = (p == 2) ? 1 : 2;
-        HexNode* hex_node = available_moves[moves[l]];
-        this->hex_board->play(hex_node->get_id_i(), hex_node->get_id_j(), p);
-      }
-
-      bool has_win = this->hex_board->has_win(player);
-      if (has_win) {
-        win_count = win_count + 1;
-      }
-      for (int l = 0; l < size - 1; l++) {
-        HexNode* hex_node = available_moves[moves[l]];
-        hex_node->set_player(0);
-      }
+      moves[k] = move_idx;
+      move_idx = move_idx + 1;
     }
 
-    //std::cout << "----------------" << std::endl;
+    int seed = 2 * j;
+    std::shuffle(moves, moves + (size - 1), std::default_random_engine(seed));
+
+    int p = player;
+    for (int l = 0; l < size - 1; l++) {
+      p = (p == 2) ? 1 : 2;
+      HexNode* hex_node = available_moves[moves[l]];
+      hb->play(hex_node->get_id_i(), hex_node->get_id_j(), p);
+    }
+
+    bool has_win = hb->has_win(player);
+    if (has_win) {
+      win_count = win_count + 1;
+    }
+    for (int l = 0; l < size - 1; l++) {
+      HexNode* hex_node = available_moves[moves[l]];
+      hb->get_node(hex_node->get_id_i(), hex_node->get_id_j())->set_player(0);
+    }
+  }
+
+  hb->get_node(choice_node->get_id_i(), choice_node->get_id_j())->set_player(0);
+  return win_count;
+}
+
+
+void job(HexBoard* hb, std::vector<int> choices, int player, int mc_steps, int* win_counts) {
+  //std::cout << "beg " << choices.size() << std::endl;
+  clock_t t;
+  t = clock();
+
+  HexBoard* clone = hb->clone();
+  std::vector<HexNode*> available_moves = clone->available_moves();
+
+  for (int i = 0; i < choices.size(); i++) {
+    int choice = choices[i];
+
+    int win_count = run_mc(clone, available_moves, choice, player, mc_steps);
+
+    win_counts[choice] = win_count;
+  }
+
+  delete clone;
+  t = clock() - t;
+  std::cout << "thread took: " << t*1.0/CLOCKS_PER_SEC << " seconds" << std::endl;
+  //std::cout << "end" << std::endl;
+}
+
+HexNode* HexAi::best_move_thread(int player) {
+  clock_t t;
+	t = clock();
+
+  std::vector<HexNode*> available_moves = this->hex_board->available_moves();
+  int size = available_moves.size();
+
+  std::vector<int> choices_0;
+  std::vector<int> choices_1;
+  std::vector<int> choices_2;
+  std::vector<int> choices_3;
+
+  int* win_counts = new int[size];
+
+  int max_proba = -1;
+  HexNode* best_move = NULL;
+
+  for (int choice = 0; choice < size; choice++) {
+    int mod = choice % 4;
+    if (mod == 0) {
+      choices_0.push_back(choice);
+    } else if (mod == 1) {
+      choices_1.push_back(choice);
+    } else if (mod == 2) {
+      choices_2.push_back(choice);
+    } else if (mod == 3) {
+      choices_3.push_back(choice);
+    }
+  }
+
+  std::thread thread_0(job, this->hex_board, choices_0, player, this->mc_steps, win_counts);
+  std::thread thread_1(job, this->hex_board, choices_1, player, this->mc_steps, win_counts);
+  std::thread thread_2(job, this->hex_board, choices_2, player, this->mc_steps, win_counts);
+  std::thread thread_3(job, this->hex_board, choices_3, player, this->mc_steps, win_counts);
+
+  thread_0.join();
+  thread_1.join();
+  thread_2.join();
+  thread_3.join();
+
+  for (int choice = 0; choice < size; choice++) {
+    if (win_counts[choice] > max_proba) {
+      max_proba = win_counts[choice];
+      best_move = available_moves[choice];
+    }
+  }
+
+  delete [] win_counts;
+
+  t = clock() - t;
+	std::cout << "threaded AI took: " << t*1.0/CLOCKS_PER_SEC << " seconds" << std::endl;
+  return best_move;
+}
+
+HexNode* HexAi::best_move(int player) {
+  clock_t t;
+  t = clock();
+
+  std::vector<HexNode*> available_moves = this->hex_board->available_moves();
+
+  int max_proba = -1;
+  HexNode* best_move = NULL;
+
+  for (int choice = 0; choice < available_moves.size(); choice++) {
+    //std::cout << "Progress : " << i << " / " << size << std::endl;
+
+    int win_count = run_mc(this->hex_board, available_moves, choice, player, this->mc_steps);
 
     if (win_count > max_proba) {
       max_proba = win_count;
-      best_move = available_moves[i];
+      best_move = available_moves[choice];
     }
 
-    this->hex_board->get_node(available_moves[i]->get_id_i(), available_moves[i]->get_id_j())->set_player(0);
   }
 
+  t = clock() - t;
+  std::cout << "AI took: " << t*1.0/CLOCKS_PER_SEC << " seconds" << std::endl;
   return best_move;
 }

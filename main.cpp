@@ -2,11 +2,12 @@
 #include "hex_ai.hpp"
 #include <iostream>
 
-int main_unsafe() {
-  HexBoard* hex_board = new HexBoard(11);
+int main_unsafe(int size, int steps) {
+  HexBoard* hex_board = new HexBoard(size);
   hex_board->print();
 
-  HexAi* hex_ai = new HexAi(hex_board, 500);
+  HexAi hex_ai(hex_board, steps);
+  HexAi hex_ai2(hex_board, steps);
 
   bool finish = false;
   int player = 2;
@@ -19,10 +20,14 @@ int main_unsafe() {
 
     while (!can_play) {
       if (player == 1) {
+        HexNode* node = hex_ai2.best_move_thread(player);
+        std::cout << "AI advise is " << node->get_id_i() << " / " << node->get_id_j() << std::endl;
         std::cin >> a >> b;
+        //a = node->get_id_i();
+        //b = node->get_id_j();
         can_play = hex_board->can_play(a, b);
       } else {
-        HexNode* node = hex_ai->best_move(player);
+        HexNode* node = hex_ai.best_move(player);
         a = node->get_id_i();
         b = node->get_id_j();
         can_play = true;
@@ -31,27 +36,15 @@ int main_unsafe() {
 
     hex_board->play(a, b, player);
     hex_board->print();
-    std::cout << "Checking player " << player << std::endl;
     finish = hex_board->has_win(player);
-    std::cout << "Player " << player << " is " << finish << std::endl;
   }
 
   std::cout << "Player " << player << " is the winner" << std::endl;
 
-  delete hex_ai;
   delete hex_board;
   return 0;
 }
 
-int main() {
-  try {
-    main_unsafe();
-    //throw new std::string("jerome");
-  } catch (std::string* s) {
-    std::cout << "crash" << std::endl;
-    std::cout << *s << std::endl;
-  } catch (char const * a) {
-    std::cout << "crash string" << std::endl;
-    std::cout << a << std::endl;
-  }
+int main(int argc, char *argv[]) {
+  main_unsafe(std::stoi(argv[1]), std::stoi(argv[2]));
 }

@@ -4,7 +4,7 @@
 #include <stack>
 
 HexBoard::HexBoard(int size) : size(size), nodes(new HexNode**[size]) {
-  std::cout << "new HexBoard()" << std::endl;
+  //std::cout << "new HexBoard()" << std::endl;
   for (int i = 0; i < this->size; i++) {
     this->nodes[i] = new HexNode*[size];
     for (int j = 0; j < this->size; j++) {
@@ -76,7 +76,7 @@ bool HexBoard::in_board(int i, int j) {
 }
 
 HexBoard::~HexBoard() {
-  std::cout << "delete HexBoard()" << std::endl;
+  //std::cout << "delete HexBoard()" << std::endl;
   for (int i = 0; i < this->size; i++) {
     for (int j = 0; j < this->size; j++) {
       delete this->nodes[i][j];
@@ -170,14 +170,12 @@ bool HexBoard::has_win(int p) {
   }
 
   bool has_win = false;
-  bool finish = false;
 
-  while (!finish && !to_visit.empty()) {
+  while (!has_win && !to_visit.empty()) {
     HexNode* node = to_visit.top();
     to_visit.pop();
     visited[node->get_id_i()][node->get_id_j()] = true;
     if (node->get_id(p - 1) == (this->size - 1)) {
-      finish = true;
       has_win = true;
     } else {
       for (int i = 0; i < node->get_neighbours_size(); i++) {
