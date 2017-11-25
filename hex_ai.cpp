@@ -2,8 +2,8 @@
 #include <algorithm>
 #include <random>
 #include <iostream>
-#include <time.h>
 #include <thread>
+#include <chrono>
 
 
 HexAi::HexAi(HexBoard* hex_board, int mc_steps) : hex_board(hex_board), mc_steps(mc_steps) {
@@ -59,9 +59,7 @@ int run_mc(HexBoard* hb, std::vector<HexNode*>& available_moves, int choice, int
 
 
 void job(HexBoard* hb, std::vector<int> choices, int player, int mc_steps, int* win_counts) {
-  //std::cout << "beg " << choices.size() << std::endl;
-  clock_t t;
-  t = clock();
+  auto start = std::chrono::system_clock::now();
 
   HexBoard* clone = hb->clone();
   std::vector<HexNode*> available_moves = clone->available_moves();
@@ -75,14 +73,13 @@ void job(HexBoard* hb, std::vector<int> choices, int player, int mc_steps, int* 
   }
 
   delete clone;
-  t = clock() - t;
-  std::cout << "thread took: " << t*1.0/CLOCKS_PER_SEC << " seconds" << std::endl;
-  //std::cout << "end" << std::endl;
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "thread took: " << elapsed_seconds.count() << " seconds" << " for nb of MC=" << choices.size() << std::endl;
 }
 
 HexNode* HexAi::best_move_thread(int player) {
-  clock_t t;
-	t = clock();
+  auto start = std::chrono::system_clock::now();
 
   std::vector<HexNode*> available_moves = this->hex_board->available_moves();
   int size = available_moves.size();
@@ -129,14 +126,14 @@ HexNode* HexAi::best_move_thread(int player) {
 
   delete [] win_counts;
 
-  t = clock() - t;
-	std::cout << "threaded AI took: " << t*1.0/CLOCKS_PER_SEC << " seconds" << std::endl;
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "threaded AI took: " << elapsed_seconds.count() << " seconds" << std::endl;
   return best_move;
 }
 
 HexNode* HexAi::best_move(int player) {
-  clock_t t;
-  t = clock();
+  auto start = std::chrono::system_clock::now();
 
   std::vector<HexNode*> available_moves = this->hex_board->available_moves();
 
@@ -155,7 +152,8 @@ HexNode* HexAi::best_move(int player) {
 
   }
 
-  t = clock() - t;
-  std::cout << "AI took: " << t*1.0/CLOCKS_PER_SEC << " seconds" << std::endl;
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "AI took: " << elapsed_seconds.count() << " seconds" << " for nb of MC=" << available_moves.size() << std::endl;
   return best_move;
 }

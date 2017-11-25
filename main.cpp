@@ -21,6 +21,7 @@ int main_unsafe(int size, int steps) {
     while (!can_play) {
       if (player == 1) {
         HexNode* node = hex_ai2.best_move_thread(player);
+        HexNode* node2 = hex_ai2.best_move(player);
         std::cout << "AI advise is " << node->get_id_i() << " / " << node->get_id_j() << std::endl;
         std::cin >> a >> b;
         //a = node->get_id_i();
